@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vidkeep"
+version = "0.1.0"
+description = "Fast, size-aware video downloads for offline viewing: parallel range requests on top of yt-dlp, quality picked to fit your disk."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Mohamed Mohsen Shehata" }]
+keywords = ["youtube", "yt-dlp", "downloader", "offline", "video", "cli"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: End Users/Desktop",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Video",
+]
+
+# yt-dlp[default] brings yt-dlp-ejs, which YouTube now needs, plus mutagen
+# for cover art. rich draws the progress bars and tables.
+dependencies = [
+  "yt-dlp[default]>=2025.11.12",
+  "rich>=13",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.6",
+]
+
+[project.scripts]
+vidkeep = "vidkeep.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/RootX22/vidkeep"
+Issues = "https://github.com/RootX22/vidkeep/issues"
+
+[tool.setuptools]
+packages = ["vidkeep"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM"]
+
+[tool.pytest.ini_options]
+markers = ["network: talks to YouTube; run with -m network"]
+addopts = "-m 'not network'"
