@@ -9,3 +9,4 @@ dist/
 *.part
 *.vidkeep
 *.vidkeep-lock
+macos/build/
