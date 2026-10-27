@@ -4,7 +4,7 @@ from fixtures import course_info
 from rich.console import Console
 
 from vidkeep import options, planner, preflight
-from vidkeep.runner import Item, Runner, RunOptions, _folder_name, _SpaceLedger
+from vidkeep.runner import Item, Runner, RunOptions, _folder_name, _Logger, _SpaceLedger
 
 
 def quiet_console():
@@ -42,6 +42,23 @@ def test_refuses_to_start_without_room_for_download_and_merge(tmp_path, monkeypa
     results = make_runner(tmp_path).run([Item("u", info=course_info())])
     assert results[0].status == "failed"
     assert "not enough disk space" in results[0].error
+
+
+def test_only_real_errors_count_as_failures():
+    logger = _Logger(quiet_console(), verbose=False)
+    logger.error("Deprecated Feature: Support for Python version 3.10 has been deprecated")
+    logger.error("ERROR: [youtube] abc: Video unavailable")
+    assert logger.errors == ["[youtube] abc: Video unavailable"]
+
+
+def test_a_failure_reports_its_own_cause_not_an_earlier_logged_error(tmp_path, monkeypatch):
+    runner = make_runner(tmp_path)
+    logger = _Logger(quiet_console(), verbose=False)
+    logger.errors.append("an earlier, unrelated yt-dlp error")
+    monkeypatch.setattr(runner, "_logger", lambda: logger)
+    monkeypatch.setattr(preflight, "free_space", lambda path: 1024**3)
+    [result] = runner.run([Item("u", info=course_info())])
+    assert result.error.startswith("not enough disk space")
 
 
 def test_space_ledger_counts_downloads_still_running(monkeypatch):

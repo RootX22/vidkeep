@@ -65,7 +65,12 @@ class _Logger:
             self.console.print(f"warning: {msg}", style="yellow", markup=False, highlight=False)
 
     def error(self, msg: str) -> None:
-        self.errors.append(re.sub(r"^ERROR:\s*", "", msg))
+        # yt-dlp also sends plain stderr notices here (e.g. "Deprecated Feature: Python
+        # 3.10"); only report_error output, prefixed "ERROR:", means something failed.
+        if msg.startswith("ERROR:"):
+            self.errors.append(_strip_error_prefix(msg))
+        else:
+            self.warning(msg)
 
 
 class _SpaceLedger:
@@ -86,6 +91,10 @@ class _SpaceLedger:
     def release(self, needed: int) -> None:
         with self._lock:
             self._reserved -= needed
+
+
+def _strip_error_prefix(msg: str) -> str:
+    return re.sub(r"^ERROR:\s*", "", msg)
 
 
 def _short(title: str) -> str:
@@ -213,7 +222,7 @@ class Runner:
             result.status, result.error = "failed", str(err)
         except Exception as err:  # the boundary per video: record why it failed, keep the others going
             result.status = "failed"
-            result.error = logger.errors[-1] if logger.errors else str(err)
+            result.error = _strip_error_prefix(str(err))
         finally:
             result.seconds = time.time() - started
             mark = {"done": "[green]done", "skipped": "[cyan]skipped", "failed": "[red]failed"}.get(result.status)
