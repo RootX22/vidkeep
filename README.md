@@ -33,6 +33,27 @@ roughly 4x to 6x; eight were slower than four. Your line and location differ: ru
 Ranges are always bounded (`Range: bytes=start-end`). Open-ended ranges are what YouTube throttles
 to playback speed, which is why a generic accelerator such as aria2 can end up slower than yt-dlp alone.
 
+## Mac app
+
+![Vidkeep for Mac](docs/mac-app.png)
+
+A native SwiftUI app for people who would rather not use a terminal. Paste a link, see every quality with
+its real size and where it plays, pick a folder, download. Downloads keep going while you look up the next
+link; stop one and resume it later from where it stopped. It drives the `vidkeep` command underneath, so
+it needs that installed first (see Install below).
+
+```sh
+macos/build.sh --install      # builds Vidkeep.app for Apple silicon and Intel into ~/Applications
+```
+
+Building needs Xcode or its command line tools (`xcode-select --install`). The app is signed ad hoc for
+the Mac that builds it.
+
+If YouTube answers "Sign in to confirm you're not a bot", choose the browser you are signed in to YouTube
+with from the person menu next to the link field; macOS asks once to let Vidkeep read that browser's data.
+
+<sub>Screenshot: Big Buck Bunny, Sintel and Tears of Steel are open movies by the Blender Foundation, CC BY.</sub>
+
 ## Install
 
 vidkeep needs Python 3.10+, [ffmpeg](https://ffmpeg.org) to join video and audio, and a JavaScript
@@ -54,6 +75,7 @@ vidkeep get  "https://www.youtube.com/watch?v=VIDEO"          # 1080p, smallest 
 vidkeep get URL --max-size 1.5G                               # best quality that fits in 1.5 GiB
 vidkeep get URL -q 720 -c compatible                          # H.264: plays on every device
 vidkeep get URL -i                                            # pick from a menu
+vidkeep get URL -f 399+140                                    # exact streams, ids from `vidkeep info --json`
 vidkeep get URL --subs en,ar -o ~/Movies/Courses              # embed subtitles, keep .srt copies
 vidkeep get URL -a --audio-format mp3                         # audio only
 vidkeep get PLAYLIST_URL -j 3 --archive done.txt              # a playlist, 3 videos at a time
@@ -99,6 +121,13 @@ Every download embeds the title, description, chapters and cover image unless `-
 `vidkeep get --help` lists every option: `--jobs`, `--connections`, `--chunk-size`, `--limit-rate`,
 `--container`, `--template`, `--split-chapters`, `--cookies-from-browser`, `--force`, `--verbose`.
 
+For other programs, `vidkeep info --json` describes a video and `vidkeep get --json` reports progress as
+one JSON object per line (`start`, `plan`, `progress`, `stage`, `finished`); the Mac app is built on both.
+SIGTERM stops a download the same way Ctrl+C does.
+
+vidkeep works with the other sites yt-dlp supports too. Sites that list plain files without codec details,
+such as the Internet Archive, show up by resolution and container.
+
 ### Interrupting and resuming
 
 Press Ctrl+C at any time and run the same command again. Finished 10 MiB ranges are recorded next to
@@ -123,7 +152,8 @@ file.
   testing a 3-minute clip of a long video never finished, with or without vidkeep.
 - No DRM-protected or YouTube Premium-only formats.
 - Age-restricted or members-only videos need `--cookies-from-browser` with a browser where you are
-  signed in.
+  signed in. The same fixes YouTube's "Sign in to confirm you're not a bot", which it shows to addresses
+  that have downloaded a lot; vidkeep prints that hint when it happens.
 - YouTube changes often. When downloads start failing, update yt-dlp first:
   `pipx inject vidkeep -U 'yt-dlp[default]'` (or `pip install -U 'yt-dlp[default]'`).
 
