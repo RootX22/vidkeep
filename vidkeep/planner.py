@@ -122,8 +122,10 @@ def streams(info: dict) -> list[Stream]:
     for fmt in info.get("formats") or []:
         if not _usable(fmt):
             continue
-        has_video = fmt.get("vcodec") not in (None, "none")
-        has_audio = fmt.get("acodec") not in (None, "none")
+        # As in yt-dlp, a missing codec means "unknown", not "absent": many sites
+        # list plain files without codecs, and those carry both picture and sound.
+        has_video = fmt.get("vcodec") != "none"
+        has_audio = fmt.get("acodec") != "none"
         if not (has_video or has_audio):
             continue
         kind = "muxed" if has_video and has_audio else "video" if has_video else "audio"
@@ -182,7 +184,8 @@ class Plan:
         pic = self.picture
         if pic is None:
             return f"audio only ({self.audio.acodec}, {self.audio.bitrate:.0f} kbps)"
-        return f"{pic.height}p {pic.codec}"
+        height = f"{pic.height}p" if pic.height else "original size"
+        return f"{height} {pic.codec or pic.ext}"
 
 
 @dataclass(frozen=True)
@@ -193,6 +196,7 @@ class Request:
     max_size: int | None = None
     audio_only: bool = False
     prefer_audio_ext: str | None = "m4a"  # AAC fits in mp4 and plays everywhere
+    formats: str | None = None  # exact ids such as "399+140", as listed by `vidkeep info --json`
 
 
 def _rank_direct(s: Stream) -> int:
@@ -226,8 +230,23 @@ def _fits(plan: Plan, max_size: int | None) -> bool:
     return max_size is None or (plan.size is not None and plan.size <= max_size)
 
 
+def plan_for(info: dict, spec: str) -> Plan:
+    """The streams named in ``spec`` ("399+140"): at most one video, one audio, or one muxed stream."""
+    offered = {s.format_id: s for s in streams(info)}
+    missing = [fid for fid in spec.split("+") if fid not in offered]
+    if missing:
+        raise NoMatch(f"format {', '.join(missing)} is not offered for this video")
+    parts = [offered[fid] for fid in spec.split("+")]
+    by_kind = {s.kind: s for s in parts}
+    if len(by_kind) != len(parts) or ("muxed" in by_kind and len(parts) > 1):
+        raise NoMatch(f"{spec!r} must name one video and one audio stream, or a single stream")
+    return Plan(video=by_kind.get("video"), audio=by_kind.get("audio"), muxed=by_kind.get("muxed"))
+
+
 def choose(info: dict, req: Request) -> Plan:
     """The best plan for ``req``: highest height first, then codec preference, within the size cap."""
+    if req.formats:
+        return plan_for(info, req.formats)
     if req.codec not in CODEC_ORDERS:
         raise ValueError(f"codec must be one of {tuple(CODEC_ORDERS)}")
     all_streams = streams(info)
@@ -254,8 +273,9 @@ def choose(info: dict, req: Request) -> Plan:
                 if video and _fits(Plan(video=video, audio=audio), req.max_size):
                     return Plan(video=video, audio=audio)
 
-    for stream in sorted(muxed, key=lambda m: (m.height or 0, m.bitrate), reverse=True):
-        if allowed(stream.height) and _fits(Plan(muxed=stream), req.max_size):
+    for stream in sorted(muxed, key=lambda m: (m.height or 0, m.bitrate, m.size or 0), reverse=True):
+        # A file of unknown height cannot be ruled out by the height cap.
+        if (stream.height is None or allowed(stream.height)) and _fits(Plan(muxed=stream), req.max_size):
             return Plan(muxed=stream)
 
     raise NoMatch(_explain(videos, audio, req))
@@ -298,4 +318,9 @@ def menu(info: dict, audio_quality: str = "medium") -> list[Option]:
             if video:
                 plan = Plan(video=video, audio=audio) if audio else Plan(video=video)
                 rows.append(Option(plan, QUICKTIME.get(codec, "no")))
+    if not rows:
+        # Sites other than YouTube often serve picture and sound in one file.
+        muxed = [s for s in all_streams if s.kind == "muxed" and s.height]
+        for stream in sorted(muxed, key=lambda m: (m.height, m.bitrate, m.size or 0), reverse=True):
+            rows.append(Option(Plan(muxed=stream), QUICKTIME.get(stream.codec, "unknown")))
     return rows

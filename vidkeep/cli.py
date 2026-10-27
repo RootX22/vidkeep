@@ -5,13 +5,18 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+import signal
 import sys
 
 from rich.console import Console
 from rich.prompt import IntPrompt
 from rich.table import Table
+from rich.text import Text
+from yt_dlp.utils import DownloadError
 
 from . import __version__, accel, bench, options, planner, preflight
+from .report import JsonReporter
 from .runner import Runner, RunOptions
 
 QUALITIES = ("best", "2160", "1440", "1080", "720", "480", "360", "240", "144")
@@ -61,6 +66,7 @@ def _add_get(sub) -> None:
     run.add_argument("--dry-run", action="store_true", help="show what would be downloaded, then stop")
     run.add_argument("--force", action="store_true", help="skip the free-space check")
     run.add_argument("-v", "--verbose", action="store_true")
+    run.add_argument("--json", action="store_true", help="print progress as JSON lines on stdout, for other programs")
 
 
 def _add_choice_flags(get) -> None:
@@ -78,6 +84,9 @@ def _add_choice_flags(get) -> None:
     pick.add_argument("--audio-format", choices=options.AUDIO_FORMATS, default="m4a")
     pick.add_argument("--audio-quality", choices=planner.AUDIO_QUALITIES, default="medium")
     pick.add_argument("-i", "--interactive", action="store_true", help="choose the quality from a menu")
+    pick.add_argument(
+        "-f", "--format", metavar="SPEC", help="exact stream ids, e.g. 399+140 (listed by `vidkeep info --json`)"
+    )
 
 
 def _add_output_flags(get) -> None:
@@ -158,6 +167,7 @@ def _request(args) -> planner.Request:
         audio_quality=args.audio_quality,
         max_size=args.max_size,
         audio_only=args.audio_only,
+        formats=args.format,
     )
 
 
@@ -213,14 +223,15 @@ def cmd_get(args, console: Console) -> int:
     runner = Runner(_request(args), _settings(args, preflight.js_runtime_args(runtime)), run_options, console)
     items = runner.resolve(urls)
     if args.interactive:
-        if len(items) != 1 or items[0].info is None:
-            console.print("[red]--interactive works with a single video[/]")
+        if len(items) != 1 or items[0].info is None or args.json:
+            console.print("[red]--interactive works with a single video and without --json[/]")
             return 2
         items[0].plan = _pick_plan(items[0].info, args.audio_quality, console)
         if items[0].plan is None:
             return 1
-    results = runner.run(items)
-    _summary(results, console)
+    results = runner.run(items, JsonReporter() if args.json else None)
+    if not args.json:
+        _summary(results, console)
     return 0 if all(r.status in ("done", "planned", "skipped") for r in results) else 1
 
 
@@ -236,16 +247,31 @@ def _pick_plan(info: dict, audio_quality: str, console: Console) -> planner.Plan
     return rows[choice - 1].plan
 
 
-def _info_payload(info: dict, rows: list[planner.Option]) -> dict:
+def _default_format(info: dict, request: planner.Request) -> str | None:
+    try:
+        return planner.choose(info, request).format_spec
+    except planner.NoMatch:
+        return None
+
+
+def _info_payload(info: dict, rows: list[planner.Option], playlist_count: int) -> dict:
+    audio = _default_format(info, planner.Request(audio_only=True))
     return {
         "id": info.get("id"),
         "title": info.get("title"),
+        "channel": info.get("channel") or info.get("uploader"),
         "duration": info.get("duration"),
+        "duration_string": info.get("duration_string"),
+        "thumbnail": info.get("thumbnail"),
+        "webpage_url": info.get("webpage_url"),
         "chapters": len(info.get("chapters") or []),
+        "playlist_count": playlist_count,
+        "default_format": _default_format(info, planner.Request()),
+        "audio_only": {"format": audio, "size": planner.plan_for(info, audio).size} if audio else None,
         "options": [
             {
                 "height": r.plan.picture.height,
-                "codec": r.plan.picture.codec,
+                "codec": r.plan.picture.codec or r.plan.picture.ext,
                 "format": r.plan.format_spec,
                 "size": r.plan.size,
                 "exact": r.plan.exact,
@@ -264,12 +290,12 @@ def cmd_info(args, console: Console) -> int:
     if not items:
         console.print("[red]nothing to show: the playlist is empty[/]")
         return 1
-    if len(items) > 1:
+    if len(items) > 1 and not args.json:
         console.print(f"playlist of {len(items)} videos; showing the first")
     info = items[0].info or runner.extract(items[0].url)
     rows = planner.menu(info)
     if args.json:
-        print(json.dumps(_info_payload(info, rows), ensure_ascii=False, indent=2))
+        print(json.dumps(_info_payload(info, rows, len(items)), ensure_ascii=False, indent=2))
         return 0
     duration = info.get("duration_string") or info.get("duration")
     console.print(f"[bold]{info.get('title')}[/]")
@@ -315,12 +341,32 @@ def cmd_bench(args, console: Console) -> int:
     return 0
 
 
+def _interrupt(signum, frame):
+    raise KeyboardInterrupt
+
+
+def _print_error(console: Console, message: str) -> None:
+    console.print(Text.assemble(("error: ", "bold red"), message))
+    if "confirm you" in message or "cookies" in message:
+        console.print(
+            "YouTube wants a signed-in browser for this. Add --cookies-from-browser firefox "
+            "(or chrome, safari, edge, brave), using a browser where you are signed in to YouTube."
+        )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     console = Console(stderr=True)
+    # A GUI stops a download with SIGTERM, and a child may inherit SIGINT as ignored;
+    # both must take the same path as Ctrl+C so partial files stay resumable.
+    signal.signal(signal.SIGINT, signal.default_int_handler)
+    signal.signal(signal.SIGTERM, _interrupt)
     handlers = {"get": cmd_get, "info": cmd_info, "doctor": cmd_doctor, "bench": cmd_bench}
     try:
         return handlers[args.command](args, console)
+    except (RuntimeError, DownloadError) as err:
+        _print_error(console, re.sub(r"^ERROR:\s*", "", str(err)))
+        return 1
     except KeyboardInterrupt:
         console.print("\n[yellow]stopped; run the same command again to resume[/]")
         # Worker threads may sit in network reads; partial files and range state

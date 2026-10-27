@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 import re
 import threading
 import time
@@ -10,20 +9,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 
 from rich.console import Console
-from rich.progress import (
-    BarColumn,
-    DownloadColumn,
-    Progress,
-    TaskID,
-    TextColumn,
-    TimeRemainingColumn,
-    TransferSpeedColumn,
-)
 
 from . import accel, options, planner, preflight
 from .engine import VidkeepYDL
-
-TITLE_WIDTH = 42
+from .report import RichReporter
 
 
 @dataclass
@@ -97,10 +86,6 @@ def _strip_error_prefix(msg: str) -> str:
     return re.sub(r"^ERROR:\s*", "", msg)
 
 
-def _short(title: str) -> str:
-    return title if len(title) <= TITLE_WIDTH else title[: TITLE_WIDTH - 1] + "…"
-
-
 def _folder_name(title: str) -> str:
     return re.sub(r'[\\/:*?"<>|]+', "_", title).strip() or "playlist"
 
@@ -114,12 +99,12 @@ class RunOptions:
 
 
 class _Tracker:
-    """Feeds one video's yt-dlp progress and post-processing events into its progress bar."""
+    """Turns one video's yt-dlp progress and post-processing hooks into reporter calls."""
 
-    def __init__(self, result: Result, progress: Progress, task: TaskID):
+    def __init__(self, result: Result, reporter, handle):
         self.result = result
-        self.progress = progress
-        self.task = task
+        self.reporter = reporter
+        self.handle = handle
         self.wanted = {s.format_id for s in result.plan.parts}
         self.received: dict[str, int] = {}
 
@@ -128,12 +113,12 @@ class _Tracker:
         if fmt not in self.wanted:
             return  # subtitles and thumbnails report here too
         self.received[fmt] = event.get("downloaded_bytes") or 0
-        self.progress.update(self.task, completed=sum(self.received.values()))
+        self.reporter.advanced(self.handle, sum(self.received.values()), event.get("speed"))
 
     def on_postprocess(self, event: dict) -> None:
         name = event.get("postprocessor")
         if event.get("status") == "started" and name != "MoveFiles":
-            self.progress.update(self.task, description=f"[dim]{name}[/] {_short(self.result.title)}")
+            self.reporter.stage(self.handle, self.result, name)
         if event.get("status") == "finished" and name == "MoveFiles":
             self.result.path = (event.get("info_dict") or {}).get("filepath")
 
@@ -178,21 +163,14 @@ class Runner:
                         items.append(Item(entry.get("webpage_url") or entry["url"], template=template))
         return items
 
-    def run(self, items: list[Item]) -> list[Result]:
-        progress = Progress(
-            TextColumn("{task.description}"),
-            BarColumn(bar_width=None),
-            DownloadColumn(binary_units=True),
-            TransferSpeedColumn(),
-            TimeRemainingColumn(),
-            console=self.console,
-            transient=False,
-        )
+    def run(self, items: list[Item], reporter=None) -> list[Result]:
+        """Download every item, ``jobs`` at a time; progress goes to ``reporter`` (terminal bars by default)."""
+        reporter = reporter or RichReporter(self.console, visible=not self.opts.dry_run)
         results = [Result(item) for item in items]
         pool = ThreadPoolExecutor(max_workers=max(1, self.opts.jobs))
         try:
-            with progress:
-                futures = [pool.submit(self._job, result, progress) for result in results]
+            with reporter:
+                futures = [pool.submit(self._job, result, reporter) for result in results]
                 for future in as_completed(futures):
                     future.result()
         except KeyboardInterrupt:
@@ -204,20 +182,20 @@ class Runner:
         pool.shutdown(wait=True)
         return results
 
-    def _job(self, result: Result, progress: Progress) -> None:
+    def _job(self, result: Result, reporter) -> None:
         item = result.item
         logger = self._logger()
         started = time.time()
-        task = progress.add_task(_short(item.url), total=None, visible=not self.opts.dry_run)
+        handle = reporter.start(result)
         try:
             info = item.info or self.extract(item.url, logger)
             result.title = info.get("title") or info.get("id") or item.url
-            progress.update(task, description=_short(result.title))
             result.plan = item.plan or planner.choose(info, self.request)
+            reporter.planned(handle, result)
             if self.opts.dry_run:
                 result.status = "planned"
                 return
-            self._download(result, info, _Tracker(result, progress, task), logger)
+            self._download(result, info, _Tracker(result, reporter, handle), logger)
         except planner.NoMatch as err:
             result.status, result.error = "failed", str(err)
         except Exception as err:  # the boundary per video: record why it failed, keep the others going
@@ -225,9 +203,7 @@ class Runner:
             result.error = _strip_error_prefix(str(err))
         finally:
             result.seconds = time.time() - started
-            mark = {"done": "[green]done", "skipped": "[cyan]skipped", "failed": "[red]failed"}.get(result.status)
-            if mark:
-                progress.update(task, description=f"{mark}[/] {_short(result.title or item.url)}")
+            reporter.finished(handle, result)
 
     def extract(self, url: str, logger: _Logger | None = None) -> dict:
         logger = logger or self._logger()
@@ -238,7 +214,6 @@ class Runner:
         return info
 
     def _download(self, result: Result, info: dict, tracker: _Tracker, logger: _Logger) -> None:
-        tracker.progress.update(tracker.task, total=result.plan.size)
         args = options.download_args(result.plan, self.settings, result.item.template)
         params = self._params(
             args, logger, progress_hooks=[tracker.on_progress], postprocessor_hooks=[tracker.on_postprocess]
@@ -261,9 +236,6 @@ class Runner:
             raise RuntimeError(logger.errors[-1])
         result.status = "done"
         result.path = result.path or (processed.get("requested_downloads") or [{}])[0].get("filepath")
-        if result.path and os.path.exists(result.path):
-            size = os.path.getsize(result.path)
-            tracker.progress.update(tracker.task, completed=size, total=size)
 
     def _reserve_space(self, plan: planner.Plan) -> int:
         """Claim room for this download, or refuse it before a byte is fetched."""

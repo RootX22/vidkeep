@@ -31,7 +31,7 @@ def pick_bench_format(info: dict) -> dict:
         if f.get("protocol") in ("http", "https") and isinstance(f.get("filesize"), int)
     ]
     if not candidates:
-        raise ValueError("no single-file HTTP format with a known size to measure")
+        raise RuntimeError("no single-file HTTP format with a known size to measure")
     return max(candidates, key=lambda f: f["filesize"])
 
 
@@ -54,7 +54,7 @@ def run(
         info = ydl.extract_info(url, download=False)
         fmt = pick_bench_format(info)
         if fmt["filesize"] < sample * len(connection_counts):
-            raise ValueError("video too short for this sample size; lower --sample")
+            raise RuntimeError("video too short for this sample size; lower --sample")
         if fmt.get("http_headers") is None:
             fmt["http_headers"] = ydl._calc_headers(fmt)
         fd = accel.ParallelRangeFD(ydl, ydl.params)

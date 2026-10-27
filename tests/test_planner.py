@@ -74,6 +74,32 @@ class TestChoose:
             choose(course_info(), Request(codec="mpeg2"))
 
 
+class TestExactFormats:
+    def test_video_and_audio(self):
+        plan = planner.plan_for(course_info(), "137+139")
+        assert (plan.video.format_id, plan.audio.format_id) == ("137", "139")
+
+    def test_single_audio_or_muxed(self):
+        assert planner.plan_for(course_info(), "140").audio.format_id == "140"
+        assert planner.plan_for(course_info(), "18").muxed.format_id == "18"
+
+    def test_choose_honours_exact_formats_over_preferences(self):
+        assert spec(formats="136+251", codec="av1") == "136+251"
+
+    @pytest.mark.parametrize(
+        "bad,message",
+        [
+            ("999+140", "not offered"),
+            ("399+137", "one video and one audio"),
+            ("18+140", "one video and one audio"),
+            ("616", "not offered"),
+        ],  # Premium-only streams are never offered
+    )
+    def test_rejects(self, bad, message):
+        with pytest.raises(planner.NoMatch, match=message):
+            planner.plan_for(course_info(), bad)
+
+
 class TestPlan:
     def test_size_and_merge(self):
         plan = choose(course_info(), Request())
@@ -102,6 +128,50 @@ class TestMenu:
             (720, "av1"),
             (720, "h264"),
         ]
+
+    def test_single_file_sites_list_their_muxed_streams(self):
+        info = {
+            "duration": 60,
+            "formats": [
+                {
+                    "format_id": "sd",
+                    "vcodec": "avc1",
+                    "acodec": "mp4a",
+                    "height": 480,
+                    "filesize": 9,
+                    "protocol": "https",
+                },
+                {
+                    "format_id": "hd",
+                    "vcodec": "avc1",
+                    "acodec": "mp4a",
+                    "height": 720,
+                    "filesize": 20,
+                    "protocol": "https",
+                },
+            ],
+        }
+        assert [r.plan.format_spec for r in planner.menu(info)] == ["hd", "sd"]
+
+    def test_files_without_codecs_count_as_picture_and_sound(self):
+        # Internet Archive lists plain files with height and exact size but no codecs.
+        info = {
+            "duration": 600,
+            "formats": [
+                {"format_id": "0", "ext": "ogv", "height": 300, "filesize": 46_935_223, "protocol": "https"},
+                {"format_id": "1", "ext": "mp4", "height": 360, "filesize": 61_878_609, "protocol": "https"},
+                {"format_id": "2", "ext": "avi", "height": 720, "filesize": 332_243_668, "protocol": "https"},
+            ],
+        }
+        assert choose(info, Request()).format_spec == "2"
+        assert choose(info, Request(max_height=480)).format_spec == "1"
+        rows = planner.menu(info)
+        assert [(r.plan.format_spec, r.quicktime) for r in rows] == [
+            ("2", "unknown"),
+            ("1", "unknown"),
+            ("0", "unknown"),
+        ]
+        assert rows[0].plan.describe() == "720p avi"
 
     def test_quicktime_column(self):
         rows = {r.plan.picture.codec: r.quicktime for r in planner.menu(course_info())}

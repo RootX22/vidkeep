@@ -1,6 +1,7 @@
 import pytest
+from fixtures import course_info
 
-from vidkeep import accel, cli, preflight
+from vidkeep import accel, cli, planner, preflight
 from vidkeep.planner import Request
 
 
@@ -49,12 +50,60 @@ def test_batch_file_skips_blanks_and_comments(tmp_path, monkeypatch):
             seen["urls"] = urls
             return []
 
-        def run(self, items):
+        def run(self, items, reporter=None):
             return []
 
     monkeypatch.setattr(cli, "Runner", FakeRunner)
     assert cli.main(["get", "--batch", str(batch)]) == 0
     assert seen["urls"] == ["https://a", "https://b"]
+
+
+def test_exact_format_and_json_flags():
+    args = parse("get", "u", "-f", "399+140", "--json")
+    assert cli._request(args).formats == "399+140"
+    assert args.json
+
+
+def test_info_payload_gives_a_ui_everything_it_shows():
+    info = {
+        **course_info(),
+        "channel": "EmbarkX",
+        "thumbnail": "https://i.ytimg.com/x.jpg",
+        "duration_string": "11:31:41",
+    }
+    payload = cli._info_payload(info, planner.menu(info), playlist_count=1)
+    assert payload["default_format"] == "399+140"
+    assert payload["audio_only"] == {"format": "140", "size": 640 * 1024**2}
+    assert payload["options"][0] == {
+        "height": 1080,
+        "codec": "av1",
+        "format": "399+140",
+        "size": int(1.12 * 1024**3) + 640 * 1024**2,
+        "exact": True,
+        "quicktime": "M3 or newer",
+    }
+    assert (payload["channel"], payload["playlist_count"]) == ("EmbarkX", 1)
+
+
+def test_extraction_errors_print_cleanly_with_a_cookie_hint(monkeypatch, capsys):
+    class BlockedRunner:
+        def __init__(self, *args, **kwargs):
+            pass
+
+        def resolve(self, urls):
+            raise RuntimeError("[youtube] abc: Sign in to confirm you're not a bot. Use --cookies-from-browser")
+
+    monkeypatch.setattr(cli, "Runner", BlockedRunner)
+    assert cli.main(["info", "https://youtu.be/abc"]) == 1
+    err = capsys.readouterr().err
+    assert "Traceback" not in err
+    assert "error: [youtube] abc: Sign in" in err
+    assert "--cookies-from-browser firefox" in err
+
+
+def test_sigterm_takes_the_ctrl_c_path():
+    with pytest.raises(KeyboardInterrupt):
+        cli._interrupt(15, None)
 
 
 def test_doctor_exit_code_follows_fatal_checks(monkeypatch):

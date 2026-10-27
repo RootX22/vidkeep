@@ -53,9 +53,23 @@ def test_audio_only_never_embeds_subtitles_or_chapters():
     assert "--embed-subs" not in args and "--embed-chapters" not in args
 
 
-def test_opus_gets_no_cover_art():
+def test_opus_gets_cover_art_like_the_other_audio_formats():
     args = download_args(plan(audio_only=True), Settings(audio_format="opus"))
-    assert "--embed-thumbnail" not in args
+    assert "--embed-thumbnail" in args
+
+
+def test_containers_that_cannot_hold_extras_are_not_asked_to():
+    # An Internet Archive .avi: yt-dlp fails the whole download if asked to embed a cover into it.
+    avi = planner.Plan(muxed=planner.Stream("2", "muxed", 332_243_668, True, "https", "avi", 720))
+    args = download_args(avi, Settings(subs="en"))
+    assert not {"--embed-thumbnail", "--embed-chapters", "--embed-subs"} & set(args)
+    assert "--embed-metadata" in args and "--write-subs" in args
+
+
+def test_final_extension():
+    assert options.final_ext(plan(), Settings(container="mkv")) == "mkv"
+    assert options.final_ext(plan(audio_only=True), Settings(audio_format="mp3")) == "mp3"
+    assert options.final_ext(plan(audio_only=True), Settings(audio_format="m4a")) == "m4a"
 
 
 def test_archive_rate_and_template():

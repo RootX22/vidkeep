@@ -17,6 +17,9 @@ from .planner import Plan
 DEFAULT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
 AUDIO_FORMATS = ("m4a", "mp3", "opus")
 CONTAINERS = ("mp4", "mkv")
+# What yt-dlp can embed into: asking for more makes it fail an otherwise good download.
+COVER_ART_EXTS = {"mp4", "m4v", "mov", "m4a", "mkv", "mka", "mp3", "ogg", "opus", "flac"}
+CHAPTER_EXTS = {"mp4", "m4v", "mov", "m4a", "mkv", "mka", "webm"}
 
 
 @dataclass(frozen=True)
@@ -46,6 +49,15 @@ def base_args(settings: Settings) -> list[str]:
     return args
 
 
+def final_ext(plan: Plan, settings: Settings) -> str:
+    """The extension of the file a plan ends up as, after merging or audio conversion."""
+    if plan.merges:
+        return settings.container
+    if plan.picture is None and plan.audio.ext != settings.audio_format:
+        return settings.audio_format
+    return plan.parts[0].ext
+
+
 def download_args(plan: Plan, settings: Settings, template: str | None = None) -> list[str]:
     audio_only = plan.picture is None
     args = base_args(settings) + [
@@ -64,15 +76,17 @@ def download_args(plan: Plan, settings: Settings, template: str | None = None) -
     ]
     if plan.merges:
         args += ["--merge-output-format", settings.container]
-    if audio_only and plan.audio and settings.audio_format != plan.audio.ext:
+    converts_audio = audio_only and plan.audio and settings.audio_format != plan.audio.ext
+    if converts_audio:
         args += ["-x", "--audio-format", settings.audio_format, "--audio-quality", "0"]
+    ext = final_ext(plan, settings)
     if settings.metadata:
-        args += ["--embed-metadata"] + ([] if audio_only else ["--embed-chapters"])
-    if settings.thumbnail and settings.audio_format != "opus":
+        args += ["--embed-metadata"] + (["--embed-chapters"] if not audio_only and ext in CHAPTER_EXTS else [])
+    if settings.thumbnail and ext in COVER_ART_EXTS:
         args += ["--embed-thumbnail"]
     if settings.subs:
         args += ["--write-subs", "--write-auto-subs", "--sub-langs", settings.subs, "--convert-subs", "srt"]
-        if not audio_only:
+        if not audio_only and ext in CHAPTER_EXTS:  # the containers that hold subtitle tracks
             args += ["--embed-subs"]
     if settings.split_chapters:
         args += [
