@@ -211,8 +211,9 @@ def _error_line(stderr: str) -> str:
 
 def _live_downloads() -> set[int]:
     """Pids of running `vidkeep get --json` processes. Checking the command, not just the pid,
-    matters because a pid can belong to another program after a restart."""
-    listing = subprocess.run(["ps", "-e", "-o", "pid=,args="], capture_output=True, text=True, check=True).stdout
+    matters because a pid can belong to another program after a restart. -ww: Linux's ps cuts
+    long command lines at 80 columns when its output is not a terminal."""
+    listing = subprocess.run(["ps", "-ww", "-e", "-o", "pid=,args="], capture_output=True, text=True, check=True).stdout
     live = set()
     for line in listing.splitlines():
         pid, _, command = line.strip().partition(" ")
