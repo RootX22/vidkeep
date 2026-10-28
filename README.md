@@ -54,6 +54,37 @@ with from the person menu next to the link field; macOS asks once to let Vidkeep
 
 <sub>Screenshot: Big Buck Bunny, Sintel and Tears of Steel are open movies by the Blender Foundation, CC BY.</sub>
 
+## Firefox add-on
+
+<img src="docs/firefox-addon.png" alt="The vidkeep add-on in Firefox: qualities with sizes and a download in progress" width="400" align="right">
+
+Click the vidkeep button on any video page in Firefox: the add-on lists every quality with its real
+size, and the download runs in vidkeep on your computer, so it keeps going after the popup closes
+and can be stopped and resumed from the same list.
+
+1. Install vidkeep (see Install below), then connect it to Firefox once:
+
+   ```sh
+   vidkeep browser install
+   ```
+
+   This writes Firefox's
+   [native messaging](https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/Native_messaging)
+   manifest and a small launcher that runs this vidkeep with your current `PATH`, so it finds ffmpeg
+   and deno. `vidkeep browser uninstall` removes both.
+2. Install the add-on (Firefox 140 or newer) from Firefox Add-ons once it is listed there, or now
+   from this repository: `about:debugging` → This Firefox → Load Temporary Add-on → choose
+   `browser/firefox/manifest.json`.
+
+The add-on itself never touches the network. It sends the page's address to vidkeep, which checks
+every field and builds the command line itself; downloads go to `~/Movies/vidkeep` (macOS) or
+`~/Videos/vidkeep` (Linux) unless you choose another folder at the bottom of the popup. macOS and
+Linux only for now.
+
+<sub>Screenshot: Big Buck Bunny, an open movie by the Blender Foundation, CC BY, from the Internet Archive.</sub>
+
+<br clear="right">
+
 ## Install
 
 vidkeep needs Python 3.10+, [ffmpeg](https://ffmpeg.org) to join video and audio, and a JavaScript
@@ -117,6 +148,7 @@ Every download embeds the title, description, chapters and cover image unless `-
 | `vidkeep info URL`       | title, length, chapters, subtitles and every quality with its size (`--json` too) |
 | `vidkeep doctor`         | check ffmpeg, ffprobe, a JavaScript runtime, yt-dlp's age, free space |
 | `vidkeep bench URL`      | time 1, 2, 4, 6 and 8 connections on your network                    |
+| `vidkeep browser install`| connect the Firefox add-on to this vidkeep (`uninstall` undoes it)   |
 
 `vidkeep get --help` lists every option: `--jobs`, `--connections`, `--chunk-size`, `--limit-rate`,
 `--container`, `--template`, `--split-chapters`, `--cookies-from-browser`, `--force`, `--verbose`.
@@ -166,6 +198,7 @@ pip install -e ".[dev]"
 ruff check . && ruff format --check .
 pytest                    # offline: parallel ranges against a local HTTP server, planner, options, CLI
 pytest -m network         # end to end against YouTube (Big Buck Bunny, CC BY 3.0)
+pytest -m firefox         # the add-on, the host and vidkeep in a real headless Firefox (Linux)
 ```
 
 ## License

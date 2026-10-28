@@ -1,4 +1,4 @@
-"""Command line: vidkeep get | info | doctor | bench."""
+"""Command line: vidkeep get | info | doctor | bench | browser."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ import os
 import re
 import signal
 import sys
+from pathlib import Path
 
 from rich.console import Console
 from rich.prompt import IntPrompt
@@ -15,11 +16,9 @@ from rich.table import Table
 from rich.text import Text
 from yt_dlp.utils import DownloadError
 
-from . import __version__, accel, bench, options, planner, preflight
+from . import __version__, accel, bench, native, options, planner, preflight
 from .report import JsonReporter
 from .runner import Runner, RunOptions
-
-QUALITIES = ("best", "2160", "1440", "1080", "720", "480", "360", "240", "144")
 
 
 def _positive_int(text: str) -> int:
@@ -47,6 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
     _add_info(sub)
     _add_doctor(sub)
     _add_bench(sub)
+    _add_browser(sub)
     return parser
 
 
@@ -71,7 +71,9 @@ def _add_get(sub) -> None:
 
 def _add_choice_flags(get) -> None:
     pick = get.add_argument_group("what to download")
-    pick.add_argument("-q", "--quality", choices=QUALITIES, default="1080", help="highest resolution (default 1080)")
+    pick.add_argument(
+        "-q", "--quality", choices=planner.QUALITIES, default="1080", help="highest resolution (default 1080)"
+    )
     pick.add_argument(
         "-c",
         "--codec",
@@ -139,6 +141,11 @@ def _add_bench(sub) -> None:
     bench_cmd.add_argument("url", metavar="URL", help="a long video (the sample is read from it)")
     bench_cmd.add_argument("--connections", default="1,2,4,6,8", help="counts to compare (default 1,2,4,6,8)")
     bench_cmd.add_argument("--sample", type=_positive_int, default=40, metavar="MIB", help="MiB per run (default 40)")
+
+
+def _add_browser(sub) -> None:
+    browser = sub.add_parser("browser", help="connect the vidkeep add-on for Firefox to this vidkeep")
+    browser.add_argument("action", choices=("install", "uninstall"))
 
 
 def _settings(args, js_args: list[str]) -> options.Settings:
@@ -341,6 +348,19 @@ def cmd_bench(args, console: Console) -> int:
     return 0
 
 
+def cmd_browser(args, console: Console) -> int:
+    places = native.Places.for_platform(Path.home())
+    if args.action == "uninstall":
+        removed = native.uninstall(places)
+        console.print("\n".join(f"removed {path}" for path in removed) or "nothing to remove")
+        return 0
+    manifest = native.install(places)
+    console.print(f"Firefox can now reach this vidkeep ([dim]{manifest}[/]).")
+    console.print("Open a video in Firefox and click the vidkeep button in the toolbar.")
+    console.print(f"Downloads are saved in {places.downloads} unless you pick another folder in the add-on.")
+    return 0
+
+
 def _interrupt(signum, frame):
     raise KeyboardInterrupt
 
@@ -361,7 +381,7 @@ def main(argv: list[str] | None = None) -> int:
     # both must take the same path as Ctrl+C so partial files stay resumable.
     signal.signal(signal.SIGINT, signal.default_int_handler)
     signal.signal(signal.SIGTERM, _interrupt)
-    handlers = {"get": cmd_get, "info": cmd_info, "doctor": cmd_doctor, "bench": cmd_bench}
+    handlers = {"get": cmd_get, "info": cmd_info, "doctor": cmd_doctor, "bench": cmd_bench, "browser": cmd_browser}
     try:
         return handlers[args.command](args, console)
     except (RuntimeError, DownloadError) as err:

@@ -1,0 +1,41 @@
+{
+  "manifest_version": 3,
+  "name": "vidkeep",
+  "version": "0.3.0",
+  "description": "Save the video you are watching for offline viewing, with vidkeep on your computer: every quality with its real size, downloads that keep going and resume.",
+  "homepage_url": "https://github.com/RootX22/vidkeep",
+  "icons": {
+    "16": "icons/16.png",
+    "32": "icons/32.png",
+    "48": "icons/48.png",
+    "96": "icons/96.png",
+    "128": "icons/128.png"
+  },
+  "permissions": [
+    "nativeMessaging",
+    "activeTab",
+    "storage"
+  ],
+  "action": {
+    "default_title": "Save with vidkeep",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/16.png",
+      "32": "icons/32.png"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "vidkeep@rootx22.github.io",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
+    }
+  }
+}

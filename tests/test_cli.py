@@ -1,3 +1,6 @@
+import json
+import sys
+
 import pytest
 from fixtures import course_info
 
@@ -35,6 +38,23 @@ def test_bad_values_are_usage_errors(argv):
 
 def test_get_without_urls_is_a_usage_error(capsys):
     assert cli.main(["get"]) == 2
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="the Firefox add-on works on macOS and Linux")
+def test_browser_install_and_uninstall_write_and_remove_the_firefox_host(tmp_path, monkeypatch):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.delenv("XDG_DATA_HOME", raising=False)
+    assert cli.main(["browser", "install"]) == 0
+    [manifest] = tmp_path.rglob("io.github.rootx22.vidkeep.json")
+    assert json.loads(manifest.read_text())["allowed_extensions"] == ["vidkeep@rootx22.github.io"]
+    assert cli.main(["browser", "uninstall"]) == 0
+    assert not manifest.exists()
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows only")
+def test_browser_install_on_windows_says_it_is_not_supported_yet(capsys):
+    assert cli.main(["browser", "install"]) == 1
+    assert "macOS and Linux" in capsys.readouterr().err
 
 
 def test_batch_file_skips_blanks_and_comments(tmp_path, monkeypatch):

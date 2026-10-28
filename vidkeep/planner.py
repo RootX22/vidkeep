@@ -37,6 +37,7 @@ CODEC_ORDERS = {
 QUICKTIME = {"h264": "yes", "h265": "yes", "av1": "M3 or newer", "vp9": "no"}
 
 AUDIO_QUALITIES = ("low", "medium", "high")
+QUALITIES = ("best", "2160", "1440", "1080", "720", "480", "360", "240", "144")
 MEDIUM_AUDIO_KBPS = 128
 
 _SIZE = re.compile(r"^\s*(\d+(?:\.\d+)?)\s*([kmgt]?)(?:i?b)?\s*$", re.IGNORECASE)

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>vidkeep</title>
+    <link rel="stylesheet" href="popup.css" />
+    <script type="module" src="popup.js"></script>
+  </head>
+  <body>
+    <header>
+      <img src="icons/32.png" alt="" />
+      <strong>vidkeep</strong>
+      <span id="version" class="muted"></span>
+    </header>
+
+    <section id="setup" hidden>
+      <h2>Connect vidkeep</h2>
+      <p>This add-on hands downloads to the vidkeep program on your computer. Install it once:</p>
+      <ol>
+        <li><code>brew install ffmpeg deno</code> <span class="muted">(or your package manager)</span></li>
+        <li><code>pipx install git+https://github.com/RootX22/vidkeep</code></li>
+        <li><code>vidkeep browser install</code></li>
+      </ol>
+      <p>Then open this button again. <a href="https://github.com/RootX22/vidkeep#firefox-add-on" target="_blank" rel="noopener">More help</a></p>
+    </section>
+
+    <section id="status" class="muted" hidden></section>
+
+    <section id="problem" hidden>
+      <p id="problem-text" class="error"></p>
+      <div id="sign-in" hidden>
+        <p>YouTube wants to see a signed-in browser. vidkeep can use the sign-in from:</p>
+        <div class="row">
+          <select id="sign-in-browser"></select>
+          <button id="sign-in-retry" type="button">Try again</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="video" hidden>
+      <div class="video-head">
+        <img id="thumbnail" alt="" />
+        <div>
+          <div id="title" class="title"></div>
+          <div id="meta" class="muted"></div>
+        </div>
+      </div>
+      <div id="choices" class="choices" role="radiogroup" aria-label="Quality"></div>
+      <div id="playlist" class="row" hidden>
+        <label>Up to <select id="playlist-quality"></select></label>
+        <label><select id="playlist-codec">
+          <option value="efficient">smallest files</option>
+          <option value="compatible">plays everywhere (H.264)</option>
+        </select></label>
+      </div>
+      <label class="row subs"><input id="subs" type="checkbox" /> Subtitles <input id="subs-langs" type="text" value="en" size="8" aria-label="Subtitle languages" /></label>
+      <button id="download" class="primary" type="button">Download</button>
+    </section>
+
+    <section id="downloads-section" hidden>
+      <div class="row spread">
+        <h2>Downloads</h2>
+        <button id="clear" class="link" type="button">Clear finished</button>
+      </div>
+      <ul id="downloads"></ul>
+    </section>
+
+    <footer>
+      <label>Save to <input id="folder" type="text" spellcheck="false" /></label>
+    </footer>
+  </body>
+</html>

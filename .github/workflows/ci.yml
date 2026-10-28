@@ -3,6 +3,7 @@ name: ci
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
 
 jobs:
@@ -30,9 +31,49 @@ jobs:
       # YouTube blocks most CI addresses, so the network tests stay local (pytest -m network).
       - run: pytest -q --cov=vidkeep --cov-report=term-missing
 
+  firefox-addon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - run: pip install -e ".[dev]"
+      # The add-on, the native host and vidkeep together in a real headless Firefox.
+      - run: pytest -m firefox -v
+      - run: npx --yes web-ext@10.7.0 lint --source-dir browser/firefox --self-hosted=false
+      - run: npx --yes web-ext@10.7.0 build --source-dir browser/firefox --artifacts-dir dist --filename vidkeep-firefox-{version}.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firefox-addon
+          path: dist/*.zip
+
   mac-app:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - run: macos/build.sh
       - run: lipo -archs macos/build/Vidkeep.app/Contents/MacOS/Vidkeep
+      - run: mkdir -p dist && ditto -c -k --keepParent macos/build/Vidkeep.app dist/Vidkeep-mac.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: mac-app
+          path: dist/Vidkeep-mac.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [test, firefox-addon, mac-app]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - run: gh release create "$GITHUB_REF_NAME" *.zip --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
+        env:
+          GH_TOKEN: ${{ github.token }}
