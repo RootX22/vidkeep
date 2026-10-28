@@ -212,7 +212,7 @@ def _error_line(stderr: str) -> str:
 def _live_downloads() -> set[int]:
     """Pids of running `vidkeep get --json` processes. Checking the command, not just the pid,
     matters because a pid can belong to another program after a restart."""
-    listing = subprocess.run(["ps", "-ax", "-o", "pid=,command="], capture_output=True, text=True, check=True).stdout
+    listing = subprocess.run(["ps", "-e", "-o", "pid=,args="], capture_output=True, text=True, check=True).stdout
     live = set()
     for line in listing.splitlines():
         pid, _, command = line.strip().partition(" ")

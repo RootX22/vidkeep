@@ -92,7 +92,7 @@ def wait_for(driver, check, timeout=120):
 def test_the_popup_looks_up_the_page_and_vidkeep_saves_it(firefox, site, tmp_path):
     out = tmp_path / "saved"
     open_popup(firefox, f"{site}/lecture.mp4")
-    version = wait_for(firefox, lambda: firefox.find_element(By.ID, "version").text)
+    version = wait_for(firefox, lambda: "".join(e.text for e in firefox.find_elements(By.ID, "version")))
     assert version == f"vidkeep {native.__version__}"
     folder = firefox.find_element(By.ID, "folder")
     folder.send_keys(str(out))
