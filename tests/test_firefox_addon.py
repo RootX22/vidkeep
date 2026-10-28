@@ -80,6 +80,13 @@ def open_popup(driver, page_url):
         )
 
 
+def texts(driver, selector):
+    """Read in one call: the popup redraws its lists every second, which leaves held elements stale."""
+    return driver.execute_script(
+        "return [...document.querySelectorAll(arguments[0])].map((element) => element.textContent)", selector
+    )
+
+
 def wait_for(driver, check, timeout=120):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
@@ -92,14 +99,14 @@ def wait_for(driver, check, timeout=120):
 def test_the_popup_looks_up_the_page_and_vidkeep_saves_it(firefox, site, tmp_path):
     out = tmp_path / "saved"
     open_popup(firefox, f"{site}/lecture.mp4")
-    version = wait_for(firefox, lambda: "".join(e.text for e in firefox.find_elements(By.ID, "version")))
+    version = wait_for(firefox, lambda: "".join(texts(firefox, "#version")))
     assert version == f"vidkeep {native.__version__}"
     folder = firefox.find_element(By.ID, "folder")
     folder.send_keys(str(out))
     firefox.execute_script("arguments[0].dispatchEvent(new Event('change'))", folder)
-    wait_for(firefox, lambda: firefox.find_elements(By.CSS_SELECTOR, ".choice"))
-    assert firefox.find_element(By.ID, "title").text == "lecture"
+    wait_for(firefox, lambda: texts(firefox, ".choice"))
+    assert texts(firefox, "#title") == ["lecture"]
     firefox.find_element(By.ID, "download").click()
-    wait_for(firefox, lambda: any("Saved" in job.text for job in firefox.find_elements(By.CSS_SELECTOR, ".job")))
+    wait_for(firefox, lambda: any("Saved" in job for job in texts(firefox, ".job")))
     [saved] = out.glob("lecture*.mp4")
     assert saved.stat().st_size > 10_000
