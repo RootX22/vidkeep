@@ -81,10 +81,15 @@ def open_popup(driver, page_url):
 
 
 def texts(driver, selector):
-    """Read in one call: the popup redraws its lists every second, which leaves held elements stale."""
-    return driver.execute_script(
+    """Read in one call: the popup redraws its lists every second, which leaves held elements stale.
+
+    Until the popup has finished loading, the script can run against the document being replaced and
+    return nothing; that counts as no matches yet, so callers keep waiting instead of failing.
+    """
+    found = driver.execute_script(
         "return [...document.querySelectorAll(arguments[0])].map((element) => element.textContent)", selector
     )
+    return found or []
 
 
 def wait_for(driver, check, timeout=120):
