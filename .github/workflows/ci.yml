@@ -72,7 +72,7 @@ jobs:
       contents: write
     steps:
       # The Mac app is signed ad hoc, which macOS blocks on other Macs, so releases carry the add-on only.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: firefox-addon
       - run: gh release create "$GITHUB_REF_NAME" *.zip --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
