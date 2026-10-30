@@ -47,7 +47,7 @@ jobs:
       - run: pytest -m firefox -v
       - run: npx --yes web-ext@10.7.0 lint --source-dir browser/firefox --self-hosted=false
       - run: npx --yes web-ext@10.7.0 build --source-dir browser/firefox --artifacts-dir dist --filename vidkeep-firefox-{version}.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: firefox-addon
           path: dist/*.zip
@@ -59,7 +59,7 @@ jobs:
       - run: macos/build.sh
       - run: lipo -archs macos/build/Vidkeep.app/Contents/MacOS/Vidkeep
       - run: mkdir -p dist && ditto -c -k --keepParent macos/build/Vidkeep.app dist/Vidkeep-mac.zip
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: mac-app
           path: dist/Vidkeep-mac.zip
