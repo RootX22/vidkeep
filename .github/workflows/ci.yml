@@ -21,7 +21,7 @@ jobs:
           - os: windows-latest
             python: "3.12"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python }}
@@ -34,7 +34,7 @@ jobs:
   firefox-addon:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -55,7 +55,7 @@ jobs:
   mac-app:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - run: macos/build.sh
       - run: lipo -archs macos/build/Vidkeep.app/Contents/MacOS/Vidkeep
       - run: mkdir -p dist && ditto -c -k --keepParent macos/build/Vidkeep.app dist/Vidkeep-mac.zip
