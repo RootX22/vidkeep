@@ -16,6 +16,12 @@ struct VideoInfo: Decodable {
         let size: Int64?
     }
 
+    /// One video of a playlist, as the playlist page lists it.
+    struct Entry: Decodable, Hashable {
+        let title: String?
+        let duration: Double?
+    }
+
     let id: String?
     let title: String?
     let channel: String?
@@ -26,8 +32,17 @@ struct VideoInfo: Decodable {
     let defaultFormat: String?
     let audioOnly: AudioOnly?
     let options: [Option]
+    let playlistTitle: String?  // these two are absent from vidkeep before 0.4
+    let entries: [Entry]?
 
     var isPlaylist: Bool { playlistCount > 1 }
+
+    /// The playlist's length, when the playlist page gives every video's duration.
+    var totalDuration: Double? {
+        guard let entries, !entries.isEmpty else { return nil }
+        let durations = entries.compactMap(\.duration)
+        return durations.count == entries.count ? durations.reduce(0, +) : nil
+    }
 }
 
 /// One row of the quality table: a video quality, or audio alone.
@@ -91,6 +106,17 @@ struct DownloadEvent: Decodable {
     let status: String?
     let path: String?
     let error: String?
+}
+
+enum Clock {
+    /// 754 -> "12:34", 3723 -> "1:02:03".
+    static func text(_ seconds: Double) -> String {
+        let whole = Int(seconds.rounded())
+        let (hours, minutes, secs) = (whole / 3600, whole % 3600 / 60, whole % 60)
+        return hours > 0
+            ? String(format: "%d:%02d:%02d", hours, minutes, secs)
+            : String(format: "%d:%02d", minutes, secs)
+    }
 }
 
 enum Bytes {

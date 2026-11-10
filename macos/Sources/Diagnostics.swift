@@ -1,17 +1,26 @@
 import AppKit
 import Foundation
 
-/// `Vidkeep --snapshot out.png`: open the window with sample content, save a picture of it, quit.
-/// The app draws its own window, so no screen-recording permission is involved.
+/// `Vidkeep --snapshot out.png [--look-up URL]`: open the window with sample content, or with a real
+/// lookup of URL, save a picture of it, quit. The app draws its own window, so no screen-recording
+/// permission is involved.
 enum Snapshot {
-    static var requestedPath: String? {
+    static var requestedPath: String? { value(after: "--snapshot") }
+    private static var lookUpLink: String? { value(after: "--look-up") }
+
+    private static func value(after flag: String) -> String? {
         let arguments = CommandLine.arguments
-        guard let index = arguments.firstIndex(of: "--snapshot"), arguments.count > index + 1 else { return nil }
+        guard let index = arguments.firstIndex(of: flag), arguments.count > index + 1 else { return nil }
         return arguments[index + 1]
     }
 
     @MainActor
     static func fill(_ model: AppModel) {
+        if let link = lookUpLink {
+            model.link = link
+            Task { await model.lookUp() }
+            return
+        }
         // Big Buck Bunny (Blender Foundation, CC BY 3.0), so the picture can be shared.
         let sample = """
         {"id": "aqz-KE-bpKQ", "title": "Big Buck Bunny 60fps 4K - Official Blender Foundation Short Film",
@@ -52,7 +61,7 @@ enum Snapshot {
 
     static func captureIfRequested() {
         guard let path = requestedPath else { return }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (lookUpLink == nil ? 3 : 30)) {
             // SwiftUI draws into Core Animation layers, which cacheDisplay(in:to:) skips,
             // so render the window's whole layer tree instead.
             guard
@@ -99,6 +108,7 @@ enum SelfTest {
             return 1
         }
         print("looked up: \(info.title ?? "?") · \(model.choices.count) choices · default \(model.selection ?? "none")")
+        if info.isPlaylist { return await runPlaylist(model, info: info) }
 
         model.download()
         guard let first = model.rows.first else { return 1 }
@@ -117,6 +127,25 @@ enum SelfTest {
         print("after resume: \(end) · saved \(Bytes.text(resumed.savedSize))")
         guard case let .done(path?) = end, FileManager.default.fileExists(atPath: path) else { return 1 }
         return 0
+    }
+
+    /// The whole playlist at 360p: every video must end saved, with its file on disk.
+    @MainActor
+    private static func runPlaylist(_ model: AppModel, info: VideoInfo) async -> Int32 {
+        print("playlist: \(info.playlistTitle ?? "?") · \(info.playlistCount) videos")
+        model.playlistQuality = "360"
+        model.download()
+        let deadline = Date().addingTimeInterval(1800)
+        while model.rows.count < info.playlistCount || model.hasActiveDownloads, Date() < deadline {
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        var saved = 0
+        for row in model.rows.reversed() {
+            if case let .done(path?) = row.state, FileManager.default.fileExists(atPath: path) { saved += 1 }
+            print("  \(row.state) · \(row.title)")
+        }
+        print("saved \(saved) of \(info.playlistCount)")
+        return saved == info.playlistCount ? 0 : 1
     }
 
     @MainActor

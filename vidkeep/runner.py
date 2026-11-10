@@ -21,6 +21,9 @@ class Item:
     info: dict | None = None
     plan: planner.Plan | None = None  # fixed in advance, e.g. picked from the interactive menu
     template: str | None = None  # playlists write into their own folder
+    playlist: str | None = None  # the playlist's title, for videos that came from one
+    title: str | None = None  # what the playlist listing says, before the video itself is read
+    duration: float | None = None
 
 
 @dataclass
@@ -156,11 +159,19 @@ class Runner:
                 if info.get("_type") != "playlist":
                     items.append(Item(url, info=info))
                     continue
-                folder = _folder_name(info.get("title") or info.get("id") or "playlist")
+                playlist = info.get("title") or info.get("id") or "playlist"
+                folder = _folder_name(playlist)
                 for index, entry in enumerate(info.get("entries") or [], 1):
                     if entry and (entry.get("url") or entry.get("webpage_url")):
-                        template = f"{folder}/{index:03d} - {options.DEFAULT_TEMPLATE}"
-                        items.append(Item(entry.get("webpage_url") or entry["url"], template=template))
+                        items.append(
+                            Item(
+                                entry.get("webpage_url") or entry["url"],
+                                template=f"{folder}/{index:03d} - {options.DEFAULT_TEMPLATE}",
+                                playlist=playlist,
+                                title=entry.get("title"),
+                                duration=entry.get("duration"),
+                            )
+                        )
         return items
 
     def run(self, items: list[Item], reporter=None) -> list[Result]:

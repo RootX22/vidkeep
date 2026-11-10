@@ -261,9 +261,13 @@ def _default_format(info: dict, request: planner.Request) -> str | None:
         return None
 
 
-def _info_payload(info: dict, rows: list[planner.Option], playlist_count: int) -> dict:
+def _info_payload(info: dict, rows: list[planner.Option], items: list) -> dict:
+    """What `info --json` prints. For a playlist, the qualities are those of its first video."""
     audio = _default_format(info, planner.Request(audio_only=True))
+    playlist = items[0].playlist if items else None
     return {
+        "playlist_title": playlist,
+        "entries": [{"title": item.title, "duration": item.duration} for item in items] if playlist else [],
         "id": info.get("id"),
         "title": info.get("title"),
         "channel": info.get("channel") or info.get("uploader"),
@@ -272,7 +276,7 @@ def _info_payload(info: dict, rows: list[planner.Option], playlist_count: int) -
         "thumbnail": info.get("thumbnail"),
         "webpage_url": info.get("webpage_url"),
         "chapters": len(info.get("chapters") or []),
-        "playlist_count": playlist_count,
+        "playlist_count": len(items),
         "default_format": _default_format(info, planner.Request()),
         "audio_only": {"format": audio, "size": planner.plan_for(info, audio).size} if audio else None,
         "options": [
@@ -302,7 +306,7 @@ def cmd_info(args, console: Console) -> int:
     info = items[0].info or runner.extract(items[0].url)
     rows = planner.menu(info)
     if args.json:
-        print(json.dumps(_info_payload(info, rows, len(items)), ensure_ascii=False, indent=2))
+        print(json.dumps(_info_payload(info, rows, items), ensure_ascii=False, indent=2))
         return 0
     duration = info.get("duration_string") or info.get("duration")
     console.print(f"[bold]{info.get('title')}[/]")

@@ -135,6 +135,21 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// The link points at one video inside a playlist (watch?v=…&list=…), so the learner can
+    /// choose between that video and the whole playlist.
+    var playlistLinkNamesAVideo: Bool {
+        URLComponents(string: lookedUpLink)?.queryItems?.contains { $0.name == "v" } ?? false
+    }
+
+    /// Look up only the video the playlist link points at, as a single video with its qualities.
+    func lookUpOnlyThisVideo() async {
+        guard var parts = URLComponents(string: lookedUpLink) else { return }
+        parts.queryItems = parts.queryItems?.filter { $0.name == "v" }
+        guard let single = parts.string else { return }
+        link = single
+        await lookUp()
+    }
+
     func present(_ found: VideoInfo, link: String) {
         info = found
         lookedUpLink = link

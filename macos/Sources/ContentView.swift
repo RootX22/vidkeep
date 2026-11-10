@@ -146,8 +146,7 @@ private struct VideoPanel: View {
         VStack(alignment: .leading, spacing: 14) {
             VideoHeader(info: info)
             if info.isPlaylist {
-                PlaylistOptions(model: model, count: info.playlistCount)
-                Spacer(minLength: 0)
+                PlaylistOptions(model: model, info: info)
             } else {
                 QualityTable(model: model)
             }
@@ -160,10 +159,17 @@ private struct VideoPanel: View {
 private struct VideoHeader: View {
     let info: VideoInfo
 
+    private var title: String {
+        (info.isPlaylist ? info.playlistTitle : nil) ?? info.title ?? "Untitled"
+    }
+
     private var details: String {
+        guard !info.isPlaylist else {
+            let length = info.totalDuration.map { " · \(Clock.text($0)) in all" } ?? ""
+            return "Playlist of \(info.playlistCount) videos" + length
+        }
         var parts = [info.channel, info.durationString].compactMap { $0 }
         if info.chapters > 0 { parts.append("\(info.chapters) chapters") }
-        if info.isPlaylist { parts.append("playlist of \(info.playlistCount) videos") }
         return parts.joined(separator: " · ")
     }
 
@@ -177,7 +183,7 @@ private struct VideoHeader: View {
             .frame(width: 176, height: 99)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             VStack(alignment: .leading, spacing: 6) {
-                Text(info.title ?? "Untitled").font(.title3.weight(.semibold)).lineLimit(2)
+                Text(title).font(.title3.weight(.semibold)).lineLimit(2)
                 Text(details).foregroundStyle(.secondary)
             }
             Spacer(minLength: 0)
@@ -227,12 +233,18 @@ private struct PlaybackLabel: View {
 
 private struct PlaylistOptions: View {
     @ObservedObject var model: AppModel
-    let count: Int
+    let info: VideoInfo
 
     private let qualities = ["best", "2160", "1440", "1080", "720", "480", "360"]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if model.playlistLinkNamesAVideo {
+                HStack {
+                    Text("This link is a video inside a playlist.").foregroundStyle(.secondary)
+                    Button("Download only that video") { Task { await model.lookUpOnlyThisVideo() } }
+                }
+            }
             HStack(spacing: 20) {
                 Picker("Highest quality", selection: $model.playlistQuality) {
                     ForEach(qualities, id: \.self) { quality in
@@ -246,9 +258,31 @@ private struct PlaylistOptions: View {
                 }
                 .frame(width: 300)
             }
-            Text("Applies to each of the \(count) videos. They're saved, numbered, in a folder named after the playlist.")
-                .foregroundStyle(.secondary)
+            EntryList(entries: info.entries ?? [])
+            Text(
+                "All \(info.playlistCount) videos at this quality, saved numbered in a folder named after "
+                    + "the playlist. Videos already saved there are skipped."
+            )
+            .foregroundStyle(.secondary)
         }
+    }
+}
+
+private struct EntryList: View {
+    let entries: [VideoInfo.Entry]
+
+    var body: some View {
+        List(Array(entries.enumerated()), id: \.offset) { index, entry in
+            HStack {
+                Text("\(index + 1)").monospacedDigit().foregroundStyle(.secondary).frame(width: 32, alignment: .trailing)
+                Text(entry.title ?? "Untitled video").lineLimit(1)
+                Spacer()
+                if let duration = entry.duration {
+                    Text(Clock.text(duration)).monospacedDigit().foregroundStyle(.secondary)
+                }
+            }
+        }
+        .frame(minHeight: 150)
     }
 }
 

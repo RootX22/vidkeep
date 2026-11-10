@@ -6,6 +6,7 @@ from fixtures import course_info
 
 from vidkeep import accel, cli, planner, preflight
 from vidkeep.planner import Request
+from vidkeep.runner import Item
 
 
 def parse(*argv):
@@ -91,7 +92,7 @@ def test_info_payload_gives_a_ui_everything_it_shows():
         "thumbnail": "https://i.ytimg.com/x.jpg",
         "duration_string": "11:31:41",
     }
-    payload = cli._info_payload(info, planner.menu(info), playlist_count=1)
+    payload = cli._info_payload(info, planner.menu(info), [Item("https://www.youtube.com/watch?v=x")])
     assert payload["default_format"] == "399+140"
     assert payload["audio_only"] == {"format": "140", "size": 640 * 1024**2}
     assert payload["options"][0] == {
@@ -103,6 +104,18 @@ def test_info_payload_gives_a_ui_everything_it_shows():
         "quicktime": "M3 or newer",
     }
     assert (payload["channel"], payload["playlist_count"]) == ("EmbarkX", 1)
+    assert (payload["playlist_title"], payload["entries"]) == (None, [])
+
+
+def test_a_playlist_payload_names_the_playlist_and_lists_its_videos():
+    items = [
+        Item("https://www.youtube.com/watch?v=a", playlist="Docker course", title="Intro", duration=300),
+        Item("https://www.youtube.com/watch?v=b", playlist="Docker course", title="Volumes", duration=None),
+    ]
+    payload = cli._info_payload(course_info(), planner.menu(course_info()), items)
+    assert payload["playlist_title"] == "Docker course"
+    assert payload["playlist_count"] == 2
+    assert payload["entries"] == [{"title": "Intro", "duration": 300}, {"title": "Volumes", "duration": None}]
 
 
 def test_extraction_errors_print_cleanly_with_a_cookie_hint(monkeypatch, capsys):
