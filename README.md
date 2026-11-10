@@ -42,6 +42,11 @@ its real size and where it plays, pick a folder, download. Downloads keep going 
 link; stop one and resume it later from where it stopped. It drives the `vidkeep` command underneath, so
 it needs that installed first (see Install below).
 
+Paste a playlist link to get the whole playlist: the app lists its videos and their total length, you pick
+the highest quality once, and every video is saved, numbered, in a folder named after the playlist. Running
+it again later downloads only the videos that are new or missing. A link to a video playing inside a
+playlist (`watch?v=…&list=…`) offers both: the whole playlist, or only that video.
+
 ```sh
 macos/build.sh --install      # builds Vidkeep.app for Apple silicon and Intel into ~/Applications
 ```
