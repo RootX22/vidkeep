@@ -88,7 +88,7 @@ class Stream:
     codec: str | None = None
     acodec: str | None = None
     bitrate: float = 0.0  # kbps
-    language_preference: int = 0
+    language_preference: int | None = None
 
     @property
     def direct(self) -> bool:
@@ -143,7 +143,7 @@ def streams(info: dict) -> list[Stream]:
                 codec=codec_family(fmt.get("vcodec")),
                 acodec=(fmt.get("acodec") or "").split(".")[0] or None,
                 bitrate=float(fmt.get("tbr") or fmt.get("abr") or 0),
-                language_preference=fmt.get("language_preference") or 0,
+                language_preference=fmt.get("language_preference"),
             )
         )
     return out
@@ -215,8 +215,11 @@ def pick_audio(audios: list[Stream], quality: str, prefer_ext: str | None) -> St
         raise ValueError(f"audio quality must be one of {AUDIO_QUALITIES}")
     if not audios:
         return None
-    # The original-language track, not a dub, then the preferred container.
-    top = max(a.language_preference for a in audios)
+    # The original-language track, not a dub, then the preferred container. A track that states no
+    # preference never outranks one that does: YouTube's HLS audio states none, and picking it over
+    # the plain m4a made downloads segmented, slower and impossible to resume.
+    stated = [a.language_preference for a in audios if a.language_preference is not None]
+    top = max(stated, default=None)
     pool = [a for a in audios if a.language_preference == top]
     if prefer_ext and any(a.ext == prefer_ext for a in pool):
         pool = [a for a in pool if a.ext == prefer_ext]

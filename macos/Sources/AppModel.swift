@@ -70,13 +70,17 @@ final class AppModel: ObservableObject {
     @Published var folder: URL { didSet { defaults.set(folder.path, forKey: "folder") } }
     @Published var subtitles: Bool { didSet { defaults.set(subtitles, forKey: "subtitles") } }
     @Published var subtitleLanguages: String { didSet { defaults.set(subtitleLanguages, forKey: "subtitleLanguages") } }
-    @Published var browser: String { didSet { defaults.set(browser, forKey: "browser") } }
+    /// A browser to borrow YouTube's sign-in from, only when the learner picks one for a lookup that
+    /// YouTube refused. Never saved: a remembered sign-in meant every later download asked the
+    /// Keychain for that browser's cookies, and failed or hung when it could not read them.
+    @Published var browser = ""
 
     /// The model behind the app window, for the app delegate's quit check.
     static weak var current: AppModel?
 
     private let defaults: UserDefaults
     private var lookedUpLink = ""
+    private var lookedUpBrowser = ""
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
@@ -85,7 +89,7 @@ final class AppModel: ObservableObject {
             ?? movies.appendingPathComponent("vidkeep")
         subtitles = defaults.bool(forKey: "subtitles")
         subtitleLanguages = defaults.string(forKey: "subtitleLanguages") ?? "en"
-        browser = defaults.string(forKey: "browser") ?? ""
+        defaults.removeObject(forKey: "browser")  // left by versions that remembered it
     }
 
     /// YouTube's "confirm you're not a bot" check, answered by signing in through a browser.
@@ -110,11 +114,25 @@ final class AppModel: ObservableObject {
         choices = []
         defer { lookingUp = false }
         do {
-            present(try await VidkeepCLI.info(for: link, browser: browser), link: link)
+            present(try await lookUpInfo(link), link: link)
         } catch {
             lookupError = error.localizedDescription
         }
         cliMissing = VidkeepCLI.locate() == nil
+    }
+
+    /// Without a sign-in first, which is what works almost always; the chosen browser only if
+    /// YouTube refused that.
+    private func lookUpInfo(_ link: String) async throws -> VideoInfo {
+        lookedUpBrowser = ""
+        do {
+            return try await VidkeepCLI.info(for: link, browser: "")
+        } catch {
+            guard !browser.isEmpty else { throw error }
+            let found = try await VidkeepCLI.info(for: link, browser: browser)
+            lookedUpBrowser = browser
+            return found
+        }
     }
 
     func present(_ found: VideoInfo, link: String) {
@@ -137,7 +155,7 @@ final class AppModel: ObservableObject {
 
     func download() {
         guard let info else { return }
-        var arguments = [lookedUpLink, "-o", folder.path] + VidkeepCLI.signInArguments(browser)
+        var arguments = [lookedUpLink, "-o", folder.path] + VidkeepCLI.signInArguments(lookedUpBrowser)
         if info.isPlaylist {
             arguments += ["-q", playlistQuality, "-c", playlistCodec]
         } else if let selection {

@@ -219,3 +219,24 @@ class TestSizes:
 )
 def test_codec_family(vcodec, family):
     assert planner.codec_family(vcodec) == family
+
+
+def test_audio_without_a_language_preference_does_not_beat_one_that_has_it():
+    # YouTube's HLS audio (233/234) states no preference; the plain m4a states -1.
+    info = course_info()
+    for fmt in info["formats"]:
+        if fmt.get("vcodec") == "none":
+            fmt["language_preference"] = -1
+    info["formats"].append(
+        {
+            "format_id": "233",
+            "vcodec": "none",
+            "acodec": None,
+            "ext": "mp4",
+            "protocol": "m3u8_native",
+            "format_note": "Default, low",
+        }
+    )
+    plan = planner.choose(info, planner.Request())
+    assert plan.audio.format_id != "233"
+    assert plan.audio.protocol == "https"
