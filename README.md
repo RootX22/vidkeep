@@ -48,6 +48,16 @@ roughly 4x to 6x; eight were slower than four. Your line and location differ: ru
 Ranges are always bounded (`Range: bytes=start-end`). Open-ended ranges are what YouTube throttles
 to playback speed, which is why a generic accelerator such as aria2 can end up slower than yt-dlp alone.
 
+## Windows app
+
+![vidkeep on Windows](docs/windows-app.png)
+
+The same idea for Windows 10 and 11, in one installer that needs no administrator rights: paste a video or
+playlist link, see every quality with its real size and whether it plays everywhere, download. Downloads
+keep going while you look up the next link, and a stopped one resumes from where it stopped.
+
+<sub>Screenshot: Big Buck Bunny, an open movie by the Blender Foundation, CC BY, from the Internet Archive.</sub>
+
 ## Mac app
 
 ![Vidkeep for Mac](docs/mac-app.png)
