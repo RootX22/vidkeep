@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "vidkeep",
-  "version": "0.3.0",
+  "version": "0.5.0",
   "description": "Save the video you are watching for offline viewing, with vidkeep on your computer: every quality with its real size, downloads that keep going and resume.",
   "homepage_url": "https://github.com/RootX22/vidkeep",
   "icons": {

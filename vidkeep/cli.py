@@ -16,7 +16,7 @@ from rich.table import Table
 from rich.text import Text
 from yt_dlp.utils import DownloadError
 
-from . import __version__, accel, bench, native, options, planner, preflight
+from . import CREDIT, __version__, accel, bench, bundled, native, options, planner, preflight
 from .report import JsonReporter
 from .runner import Runner, RunOptions
 
@@ -40,7 +40,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="vidkeep",
         description="Fast, size-aware video downloads for offline viewing, built on yt-dlp.",
     )
-    parser.add_argument("--version", action="version", version=f"vidkeep {__version__}")
+    parser.add_argument("--version", action="version", version=f"vidkeep {__version__}, made by {CREDIT} in Egypt")
     sub = parser.add_subparsers(dest="command", required=True)
     _add_get(sub)
     _add_info(sub)
@@ -379,6 +379,7 @@ def _print_error(console: Console, message: str) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
+    bundled.use_bundled_tools()
     args = build_parser().parse_args(argv)
     console = Console(stderr=True)
     # A GUI stops a download with SIGTERM, and a child may inherit SIGINT as ignored;

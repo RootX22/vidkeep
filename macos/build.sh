@@ -1,8 +1,20 @@
 #!/bin/sh
 # Build Vidkeep.app (Apple silicon and Intel) into macos/build/.
-# usage: macos/build.sh [--install]    --install also copies it to ~/Applications
+# usage: macos/build.sh [--standalone] [--install]
+#   --standalone  put vidkeep, ffmpeg and deno inside the app (the downloadable build; needs python3)
+#   --install     also copy it to ~/Applications
 set -eu
 cd "$(dirname "$0")"
+
+STANDALONE=no
+INSTALL=no
+for flag in "$@"; do
+    case "$flag" in
+        --standalone) STANDALONE=yes ;;
+        --install) INSTALL=yes ;;
+        *) echo "unknown option $flag" >&2; exit 2 ;;
+    esac
+done
 
 BUILD=build
 APP="$BUILD/Vidkeep.app"
@@ -27,11 +39,16 @@ for points in 16 32 128 256 512; do
 done
 iconutil -c icns -o "$APP/Contents/Resources/AppIcon.icns" "$ICONSET"
 
-# Ad-hoc signature: enough for an app built on this Mac to open without warnings.
-codesign --force --sign - "$APP"
+if [ "$STANDALONE" = yes ]; then
+    ../packaging/macos/bundle_cli.sh "$APP" "${PYTHON:-python3}"
+fi
+
+# Ad-hoc signature, nested programs included: enough for an app built on this Mac to open
+# without warnings; a downloaded copy needs "Open" from the right-click menu the first time.
+codesign --force --deep --sign - "$APP"
 echo "built $(pwd)/$APP"
 
-if [ "${1:-}" = "--install" ]; then
+if [ "$INSTALL" = yes ]; then
     mkdir -p "$HOME/Applications"
     rm -rf "${HOME:?}/Applications/Vidkeep.app"
     cp -R "$APP" "$HOME/Applications/"

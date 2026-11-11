@@ -27,7 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import urlsplit
 
-from . import __version__, planner
+from . import __version__, child, planner
 
 HOST_NAME = "io.github.rootx22.vidkeep"
 EXTENSION_ID = "vidkeep@rootx22.github.io"
@@ -197,15 +197,6 @@ def get_args(request: dict, places: Places) -> list[str]:
     return args + sign_in_args(request) + ["--", _url(request.get("url"))]
 
 
-def _error_line(stderr: str) -> str:
-    """vidkeep prints "error: ..." and maybe a hint, wrapped to 80 columns; fall back to its last line."""
-    lines = [line.strip() for line in stderr.splitlines() if line.strip()]
-    starts = [index for index, line in enumerate(lines) if line.lower().startswith("error:")]
-    if starts:
-        return " ".join(lines[starts[-1] :])[len("error:") :].strip()
-    return lines[-1] if lines else "vidkeep stopped without saying why"
-
-
 # Jobs
 
 
@@ -284,28 +275,17 @@ class Jobs:
             status = "failed"
         error = None
         if status == "failed":
-            error = next((video["error"] for video in videos if video.get("error")), None) or _error_line(
+            error = next((video["error"] for video in videos if video.get("error")), None) or child.error_message(
                 (self.root / f"{record['id']}.log").read_text(encoding="utf-8", errors="replace")
             )
         return {"id": record["id"], "url": record["args"][-1], "status": status, "error": error, "videos": videos}
 
     def _videos(self, job: str) -> list[dict]:
-        """Fold the progress events into one entry per video, in the order vidkeep started them."""
+        """One entry per video, in the order vidkeep started them."""
         videos: dict[int, dict] = {}
         with open(self.root / f"{job}.jsonl", encoding="utf-8") as events:
             for line in events:
-                try:
-                    event = json.loads(line)
-                except json.JSONDecodeError:
-                    continue  # the last line may still be half written
-                video = videos.setdefault(event.get("id"), {"status": "starting", "downloaded": 0})
-                kind = event.pop("event", None)
-                event.pop("id", None)
-                if kind == "plan":
-                    video["status"] = "downloading"
-                elif kind == "stage":
-                    video["status"] = "processing"
-                video.update(event)
+                child.fold_event(videos, line)
         return list(videos.values())
 
     def _running(self, record: dict) -> bool:
@@ -363,7 +343,7 @@ class Host:
         except subprocess.TimeoutExpired:
             raise Refused("the site took too long to answer") from None
         if done.returncode != 0:
-            raise Refused(_error_line(done.stderr))
+            raise Refused(child.error_message(done.stderr))
         return json.loads(done.stdout)
 
     def reveal(self, job: str) -> None:
@@ -382,7 +362,7 @@ class Host:
 
 def main() -> None:
     places = Places.for_platform(Path.home())
-    host = Host(places, Jobs(places.jobs_dir, (sys.executable, "-m", "vidkeep")))
+    host = Host(places, Jobs(places.jobs_dir, tuple(child.command())))
     host.serve(sys.stdin.buffer, sys.stdout.buffer)
 
 

@@ -2,6 +2,22 @@
 
 Fast, size-aware video downloads for offline viewing, built on [yt-dlp](https://github.com/yt-dlp/yt-dlp).
 
+## Download
+
+| | |
+|---|---|
+| **Windows 10 / 11** | [vidkeep-setup.exe](https://github.com/RootX22/vidkeep/releases/latest/download/vidkeep-setup.exe) |
+| **Mac (Apple silicon)** | [Vidkeep-mac.zip](https://github.com/RootX22/vidkeep/releases/latest/download/Vidkeep-mac.zip) |
+| **Firefox add-on** | [vidkeep-firefox.zip](https://github.com/RootX22/vidkeep/releases/latest/download/vidkeep-firefox.zip) (see [Firefox add-on](#firefox-add-on)) |
+
+The Windows and Mac downloads carry ffmpeg and a JavaScript runtime inside, so there is nothing else to
+install. They are not signed with a paid certificate yet: on Windows click **More info → Run anyway** the
+first time; on a Mac right-click the app and choose **Open**. Free, no account, no ads.
+
+حمّل النسخة المناسبة لجهازك من الجدول فوق، وكل اللي البرنامج محتاجه جواه.
+
+## What it adds to yt-dlp
+
 yt-dlp does the hard part: reading YouTube and hundreds of other sites. vidkeep adds three things on top:
 
 - **Parallel range downloads.** A video or audio stream that is a single file is fetched over several
@@ -209,3 +225,7 @@ pytest -m firefox         # the add-on, the host and vidkeep in a real headless 
 ## License
 
 MIT
+
+---
+
+<p align="center">Made with ♥ by Mohamed Mohsen · <a href="https://github.com/RootX22">root0x0</a> from Egypt 🇪🇬</p>

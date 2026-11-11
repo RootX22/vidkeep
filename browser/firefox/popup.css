@@ -277,3 +277,14 @@ footer label {
   display: block;
   color: var(--muted);
 }
+
+.credit {
+  margin: 10px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.love {
+  color: #e0245e;
+}

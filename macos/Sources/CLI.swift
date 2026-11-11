@@ -17,9 +17,17 @@ enum VidkeepCLI {
         ["\(home)/.local/bin", "/opt/homebrew/bin", "/usr/local/bin", "\(home)/.deno/bin", "/usr/bin", "/bin"]
     }
 
+    /// The vidkeep the downloadable app carries inside itself, with its own ffmpeg and deno.
+    private static var bundled: URL? {
+        Bundle.main.resourceURL?.appendingPathComponent("vidkeep/vidkeep")
+    }
+
     static func locate() -> URL? {
         if let custom = ProcessInfo.processInfo.environment["VIDKEEP_CLI"] {
             return URL(fileURLWithPath: custom)  // a development checkout, for example
+        }
+        if let bundled, FileManager.default.isExecutableFile(atPath: bundled.path) {
+            return bundled
         }
         return searchPath
             .map { URL(fileURLWithPath: $0).appendingPathComponent("vidkeep") }

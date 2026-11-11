@@ -1,0 +1,36 @@
+vidkeep is free software under the MIT license:
+https://github.com/RootX22/vidkeep
+
+The downloadable builds (the Windows installer and the Mac app) also carry these programs and
+libraries, each under its own license. All of them are free and open source; their source code is
+available at the addresses below.
+
+Programs
+- FFmpeg and FFprobe, GPL 3.0 builds. Source: https://ffmpeg.org/download.html
+  Windows build: https://github.com/yt-dlp/FFmpeg-Builds (build scripts and sources)
+  Mac build: https://ffmpeg.martin-riedl.de (build scripts and sources)
+- Deno, MIT. https://github.com/denoland/deno
+
+Libraries
+- yt-dlp, Unlicense. https://github.com/yt-dlp/yt-dlp
+- yt-dlp-ejs, Unlicense. https://github.com/yt-dlp/ejs
+- Python, PSF License. https://www.python.org
+- PyInstaller bootloader, GPL 2.0 with an exception that allows any program built with it.
+  https://github.com/pyinstaller/pyinstaller
+- rich, MIT. https://github.com/Textualize/rich
+- mutagen, GPL 2.0 or later. https://github.com/quodlibet/mutagen
+- requests, Apache 2.0. https://github.com/psf/requests
+- urllib3, MIT. https://github.com/urllib3/urllib3
+- certifi, MPL 2.0. https://github.com/certifi/python-certifi
+- websockets, BSD 3-Clause. https://github.com/python-websockets/websockets
+- brotli, MIT. https://github.com/google/brotli
+- pycryptodomex, BSD 2-Clause and public domain. https://github.com/Legrandin/pycryptodome
+
+Windows only
+- Tcl/Tk, BSD-style license. https://www.tcl-lang.org
+- Sun Valley ttk theme (sv-ttk), MIT. https://github.com/rdbende/Sun-Valley-ttk-theme
+- darkdetect, BSD 3-Clause. https://github.com/albertosottile/darkdetect
+- Pillow, MIT-CMU. https://github.com/python-pillow/Pillow
+
+Because FFmpeg and mutagen are GPL, a downloadable build as a whole is distributed under the terms
+of the GPL 3.0, which lets you use, share and change it freely. vidkeep's own code stays MIT.

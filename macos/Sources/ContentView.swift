@@ -30,6 +30,8 @@ struct ContentView: View {
             Divider()
             DownloadsPanel(model: model)
                 .frame(height: 250)
+            Divider()
+            Credit()
         }
         .frame(minWidth: 780, minHeight: 680)
     }
@@ -451,5 +453,19 @@ enum Detail {
     static func color(for state: VideoRow.State) -> Color {
         if case .failed = state { return .red }
         return .secondary
+    }
+}
+
+private struct Credit: View {
+    var body: some View {
+        HStack {
+            Text("Made with ") + Text("♥").foregroundColor(.pink) + Text(" by Mohamed Mohsen · root0x0 from Egypt 🇪🇬")
+            Spacer()
+            Link("vidkeep on GitHub", destination: URL(string: "https://github.com/RootX22/vidkeep")!)
+        }
+        .font(.callout)
+        .foregroundStyle(.secondary)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 }

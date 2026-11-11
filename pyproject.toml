@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vidkeep"
-version = "0.4.0"
+version = "0.5.0"
 description = "Fast, size-aware video downloads for offline viewing: parallel range requests on top of yt-dlp, quality picked to fit your disk."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -32,6 +32,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# The desktop window (vidkeep-desktop), which the Windows installer ships.
+desktop = [
+  "sv-ttk>=2.6",
+  "darkdetect>=0.8",
+  "pillow>=10",
+]
 dev = [
   "pytest>=8.0",
   "pytest-cov>=5.0",
@@ -42,12 +48,18 @@ dev = [
 [project.scripts]
 vidkeep = "vidkeep.cli:main"
 
+[project.gui-scripts]
+vidkeep-desktop = "vidkeep.gui:main"
+
 [project.urls]
 Homepage = "https://github.com/RootX22/vidkeep"
 Issues = "https://github.com/RootX22/vidkeep/issues"
 
 [tool.setuptools]
 packages = ["vidkeep"]
+
+[tool.setuptools.package-data]
+vidkeep = ["assets/*.png"]
 
 [tool.ruff]
 line-length = 120
