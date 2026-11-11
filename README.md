@@ -14,7 +14,6 @@ The Windows and Mac downloads carry ffmpeg and a JavaScript runtime inside, so t
 install. They are not signed with a paid certificate yet: on Windows click **More info → Run anyway** the
 first time; on a Mac right-click the app and choose **Open**. Free, no account, no ads.
 
-حمّل النسخة المناسبة لجهازك من الجدول فوق، وكل اللي البرنامج محتاجه جواه.
 
 ## What it adds to yt-dlp
 
