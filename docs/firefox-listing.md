@@ -14,7 +14,7 @@ with its real size, downloads that keep going after the popup closes, stop and r
 
 ## Description
 
-vidkeep is a free, open-source video downloader built on yt-dlp. This add-on is its button in
+vidkeep is a free video downloader built on yt-dlp. This add-on is its button in
 Firefox.
 
 Requires the vidkeep program on your computer (macOS or Linux). Setup takes two commands:
@@ -40,7 +40,8 @@ Category: Download Management. Tags: download, video, offline, yt-dlp.
 ## Notes to reviewer
 
 The package is the source; nothing is minified or bundled. It is the `browser/firefox` folder of
-https://github.com/RootX22/vidkeep (MIT).
+https://github.com/RootX22/vidkeep. License: All Rights Reserved (choose that
+option on the submission form); the source is public so it can be reviewed.
 
 The add-on talks only to the native host `io.github.rootx22.vidkeep`, which is part of the same
 repository (`vidkeep/native.py`) and is installed by the user with `vidkeep browser install`. The

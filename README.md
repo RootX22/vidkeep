@@ -223,7 +223,10 @@ pytest -m firefox         # the add-on, the host and vidkeep in a real headless 
 
 ## License
 
-MIT
+All rights reserved. vidkeep is free to download and use; its source is public so it can be read and
+reviewed, but copying, changing or redistributing it needs written permission. See [LICENSE](LICENSE).
+Versions before 0.5.0 were released under the MIT License. The programs bundled in the downloads keep
+their own licenses ([THIRD_PARTY.txt](packaging/THIRD_PARTY.txt)).
 
 ---
 

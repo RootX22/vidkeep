@@ -8,14 +8,14 @@ version = "0.5.0"
 description = "Fast, size-aware video downloads for offline viewing: parallel range requests on top of yt-dlp, quality picked to fit your disk."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = { text = "Proprietary. All rights reserved; see LICENSE." }
 authors = [{ name = "Mohamed Mohsen Shehata" }]
 keywords = ["youtube", "yt-dlp", "downloader", "offline", "video", "cli"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
   "Intended Audience :: End Users/Desktop",
-  "License :: OSI Approved :: MIT License",
+  "License :: Other/Proprietary License",
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",

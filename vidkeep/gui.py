@@ -177,7 +177,7 @@ class App:
 
     def _build(self) -> None:
         self.root.title("vidkeep")
-        self.root.minsize(820, 640)
+        self.root.minsize(760, 560)
         page = ttk.Frame(self.root, padding=16)
         page.pack(fill="both", expand=True)
         page.columnconfigure(0, weight=1)
@@ -318,7 +318,7 @@ class App:
         for part in parts:
             part.pack(side="left", padx=(0, 4))
             part.bind("<Button-1>", lambda _event: webbrowser.open(REPO))
-        tinted(row, f"vidkeep {__version__} · free and open source").pack(side="right")
+        tinted(row, f"vidkeep {__version__} · free").pack(side="right")
         return row
 
     def say(self, text: str, colour: str = "muted") -> None:
@@ -558,7 +558,9 @@ def make_window() -> tk.Tk:
     with resources.as_file(icon) as path:
         root.icon = tk.PhotoImage(file=str(path))  # held here: Tk drops images nothing refers to
     root.iconphoto(True, root.icon)
-    root.geometry("960x760")
+    # Fit small screens (1366x768 laptops), leaving room for the title bar and taskbar.
+    height = min(760, root.winfo_screenheight() - 110)
+    root.geometry(f"{min(960, root.winfo_screenwidth() - 40)}x{height}+20+10")
     return root
 
 

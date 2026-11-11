@@ -29,7 +29,7 @@ python -m pip install --quiet ".[desktop]" pyinstaller==6.22.3
 python -c "from PIL import Image; Image.open('vidkeep/assets/icon-256.png').save(r'$work\vidkeep.ico', sizes=[(16,16),(24,24),(32,32),(48,48),(64,64),(128,128),(256,256)])"
 python -m PyInstaller --noconfirm --log-level WARN --windowed --name Vidkeep `
     --icon "$work\vidkeep.ico" `
-    --collect-all yt_dlp_ejs --collect-submodules rich --collect-data sv_ttk --collect-data vidkeep `
+    --collect-all yt_dlp_ejs --collect-submodules rich --collect-data sv_ttk --collect-data vidkeep --exclude-module mutagen `
     --distpath "$work\dist" --workpath "$work\pyinstaller" --specpath $work `
     packaging\desktop_entry.py
 

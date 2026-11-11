@@ -1,3 +1,6 @@
+import importlib
+
+import yt_dlp
 from fixtures import course_info
 
 from vidkeep import options, planner
@@ -51,6 +54,17 @@ def test_audio_only_to_mp3_converts():
 def test_audio_only_never_embeds_subtitles_or_chapters():
     args = download_args(plan(audio_only=True), Settings(subs="en"))
     assert "--embed-subs" not in args and "--embed-chapters" not in args
+
+
+def test_without_mutagen_opus_goes_without_a_cover_instead_of_failing(monkeypatch):
+    monkeypatch.setattr(yt_dlp.dependencies, "mutagen", None)
+    reloaded = importlib.reload(options)
+    try:
+        assert "opus" not in reloaded.COVER_ART_EXTS
+        assert "m4a" in reloaded.COVER_ART_EXTS
+    finally:
+        monkeypatch.undo()
+        importlib.reload(options)
 
 
 def test_opus_gets_cover_art_like_the_other_audio_formats():

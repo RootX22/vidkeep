@@ -24,7 +24,7 @@ UninstallDisplayIcon={app}\Vidkeep.exe
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
-LicenseFile={#SourceDir}\THIRD_PARTY.txt
+LicenseFile={#SourceDir}\LICENSE
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"

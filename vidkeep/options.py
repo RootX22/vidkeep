@@ -18,7 +18,10 @@ DEFAULT_TEMPLATE = "%(title)s [%(id)s].%(ext)s"
 AUDIO_FORMATS = ("m4a", "mp3", "opus")
 CONTAINERS = ("mp4", "mkv")
 # What yt-dlp can embed into: asking for more makes it fail an otherwise good download.
-COVER_ART_EXTS = {"mp4", "m4v", "mov", "m4a", "mkv", "mka", "mp3", "ogg", "opus", "flac"}
+# ffmpeg embeds cover art in these; yt-dlp needs mutagen for Ogg, Opus and FLAC. The downloadable
+# builds leave mutagen out (it is GPL, and they are not), so those formats go without a cover there.
+FFMPEG_COVER_EXTS = {"mp4", "m4v", "mov", "m4a", "mkv", "mka", "mp3"}
+COVER_ART_EXTS = FFMPEG_COVER_EXTS | ({"ogg", "opus", "flac"} if yt_dlp.dependencies.mutagen else set())
 CHAPTER_EXTS = {"mp4", "m4v", "mov", "m4a", "mkv", "mka", "webm"}
 
 

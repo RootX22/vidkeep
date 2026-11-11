@@ -28,7 +28,7 @@ mkdir -p "$WORK"
 "$PYTHON" -m venv "$WORK/venv"
 "$WORK/venv/bin/pip" install -q "$ROOT" pyinstaller==6.22.3
 "$WORK/venv/bin/pyinstaller" --noconfirm --log-level WARN --console --name vidkeep \
-    --collect-all yt_dlp_ejs --collect-submodules rich \
+    --collect-all yt_dlp_ejs --collect-submodules rich --exclude-module mutagen \
     --distpath "$WORK/dist" --workpath "$WORK/pyinstaller" --specpath "$WORK" \
     "$ROOT/packaging/cli_entry.py"
 
@@ -41,7 +41,7 @@ for archive in ffmpeg ffprobe deno; do
     unzip -q -o "$WORK/$archive.zip" -d "$BIN"
 done
 chmod +x "$BIN"/*
-cp "$ROOT/packaging/THIRD_PARTY.txt" "$WORK/dist/vidkeep/"
+cp "$ROOT/packaging/THIRD_PARTY.txt" "$ROOT/LICENSE" "$WORK/dist/vidkeep/"
 
 rm -rf "$APP/Contents/Resources/vidkeep"
 cp -R "$WORK/dist/vidkeep" "$APP/Contents/Resources/vidkeep"
