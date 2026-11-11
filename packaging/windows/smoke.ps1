@@ -11,14 +11,14 @@ New-Item -ItemType Directory -Force $work | Out-Null
 Start-Process -Wait "$root\dist\vidkeep-setup.exe" -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/CURRENTUSER", "/DIR=$app"
 $exe = Join-Path $app "Vidkeep.exe"
 
-function Cli([string[]]$arguments) {
+function Invoke-Vidkeep([string[]]$arguments) {
     $output = & $exe --cli @arguments 2>&1 | Out-String
     if ($LASTEXITCODE -ne 0) { throw "Vidkeep.exe --cli $arguments failed:`n$output" }
     return $output
 }
 
-Write-Output (Cli @("--version"))
-$doctor = Cli @("doctor", "-o", $work)
+Write-Output (Invoke-Vidkeep @("--version"))
+$doctor = Invoke-Vidkeep @("doctor", "-o", $work)
 Write-Output $doctor
 if ($doctor -match "missing") { throw "a bundled tool was not found" }
 
@@ -29,7 +29,7 @@ New-Item -ItemType Directory -Force $site | Out-Null
 $server = Start-Process -PassThru -WindowStyle Hidden python -ArgumentList "-m", "http.server", "8765", "--bind", "127.0.0.1", "--directory", $site
 Start-Sleep -Seconds 2
 try {
-    Write-Output (Cli @("get", "-o", "$work\saved", "--", "http://127.0.0.1:8765/lecture.mp4"))
+    Write-Output (Invoke-Vidkeep @("get", "-o", "$work\saved", "--", "http://127.0.0.1:8765/lecture.mp4"))
 } finally {
     Stop-Process -Id $server.Id
 }
